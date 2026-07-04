@@ -1,0 +1,12 @@
+[project]
+name = "cosmic-minds-backend"
+version = "0.1.0"
+description = "ADK Backend for Cosmic Minds"
+requires-python = ">=3.11"
+dependencies = [
+    "google-adk",
+    "pyyaml",
+    "google-genai",
+    "flask",
+    "flask-cors"
+]

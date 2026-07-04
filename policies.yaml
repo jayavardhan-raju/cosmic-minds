@@ -1,0 +1,67 @@
+# policies.yaml — Cosmic Minds policy server (FORGE Guard phase)
+#
+# Two-layer gating in front of every tool call (see specs/mcp-contracts.md + AGENTS.md §7):
+#   1. Structural gating (this file) — fast, deterministic allow/deny by actor (child vs parent) + environment.
+#   2. Semantic gating — safety.classify + the natural-language policies below, for when a tool IS allowed
+#      but the content/way it's used would violate child-safety.
+# Flow per action: structural check -> semantic check (safety.classify) -> execute, else return a
+# "Policy Violation" message so the agent fails safe (never expose raw errors to the child).
+
+environments:
+  localhost:                 # local home demo only
+    blocked_tools:
+      - progress.summary     # parent-only views still gated by auth even locally
+    notes: "localStorage keys acceptable ONLY here; never in a shared/published build."
+  staging:
+    blocked_tools: []
+  production:
+    blocked_tools: []
+    require_server_side_keys: true   # provider keys must NOT be reachable client-side
+
+# Two actors. The CHILD never reaches parent/admin tools or settings.
+roles:
+  child:
+    allowed_tools:
+      - safety.classify
+      - math.verify
+      - tts.speak
+      - transcripts.append        # append only (audit); cannot list/clear
+      - progress.start_session
+      - progress.end_session
+    denied_tools:
+      - transcripts.list
+      - transcripts.clear
+      - progress.summary
+      - settings.write            # model selection, API keys, PIN — parent only
+  parent:
+    requires_auth: pin            # NOTE: client PIN is UX, not security; real auth required before launch
+    allowed_tools:
+      - "*"
+
+# Actions that ALWAYS require explicit human (parent) sign-off, regardless of role:
+require_human_approval:
+  - settings.write                # change model backend / API keys / PIN
+  - transcripts.clear             # destructive: wipes history
+  - data.export
+
+# Hard invariants the policy server enforces on the response pipeline:
+pipeline_invariants:
+  - "safety.classify must return allow before tts.speak runs (else send safe fallback + log)."
+  - "math.verify must run and pass before any numeric answer reaches tts.speak."
+  - "distress verdict -> scripted escalation + transcripts.append(flag=distress, resource=988); no tutoring."
+
+# Natural-language policies the semantic gate (safety.classify + judge) enforces:
+semantic_policies:
+  - "Never collect, echo, or store the child's personal information (name, age, location, school, contacts, photo)."
+  - "Never produce violence, weapons, gore, scary/horror, adult/sexual, profanity, substances, hate, or self-harm content."
+  - "Never give medical/diagnostic, legal, or financial advice."
+  - "Never give instructions for anything dangerous (fire, chemicals, electricity, sharp tools without a grown-up)."
+  - "Never draw or describe how to draw real people's faces."
+  - "Never promise secrecy to the child; encourage telling a trusted grown-up."
+  - "Responses stay grade-2 vocabulary and 2-5 sentences; redirect off-subject instead of answering as the wrong teacher."
+
+# Provider key handling (Pillar 5 — zero ambient authority):
+secrets:
+  storage: server_side_secret_manager     # localStorage only for local home demo
+  client_may_read_keys: false
+  per_provider_scope: true                 # separate scoped keys for Gemini / Claude / OpenAI / Ollama

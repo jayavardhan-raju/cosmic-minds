@@ -8,7 +8,8 @@ const ParentDashboard = () => {
 
   useEffect(() => {
     if (isDashboardOpen && activeTab === 'transcripts') {
-      fetch('http://127.0.0.1:5000/api/transcripts')
+      const API_BASE = import.meta.env.VITE_API_URL || 'https://cosmic-backend-981638588408.us-central1.run.app';
+      fetch(`${API_BASE}/api/transcripts`)
         .then(res => res.json())
         .then(data => setTranscripts(data))
         .catch(err => console.error("Failed to load transcripts", err));

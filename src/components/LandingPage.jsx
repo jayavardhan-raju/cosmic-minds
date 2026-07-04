@@ -56,7 +56,8 @@ const LandingPage = () => {
     setSubtitles('Loading your teacher...');
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/chat', {
+      const API_BASE = import.meta.env.VITE_API_URL || 'https://cosmic-backend-981638588408.us-central1.run.app';
+      const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

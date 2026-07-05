@@ -1,0 +1,6 @@
+# Ignore backend and Python files so Vercel only builds the React frontend
+backend/
+*.py
+.agent/
+specs/
+deck/
